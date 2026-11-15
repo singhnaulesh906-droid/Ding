@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Ding</string>
+    <string name="auth_tagline">Private messaging, sealed by cryptography</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="tab_chats">Chats</string>
+    <string name="tab_updates">Updates</string>
+    <string name="tab_security">Security</string>
+    <string name="tab_settings">Settings</string>
+    <string name="e2e_banner">Messages are end-to-end encrypted with ECDH P-256 &amp; AES-256-GCM. Tap to verify safety code.</string>
+    <string name="empty_chats_title">No conversations yet</string>
+    <string name="empty_chats_subtitle">Start an encrypted chat with someone on Ding or open Saved Messages to test private notes.</string>
+    <string name="action_new_chat">New encrypted chat</string>
+    <string name="msg_placeholder">Message (encrypted)…</string>
+    <string name="error_generic">Something went wrong. Please try again.</string>
+</resources>

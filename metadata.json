@@ -1,0 +1,6 @@
+{
+  "name": "Ding",
+  "description": "Secure real-time messaging app with modern WhatsApp-style chats, read receipts, and privacy controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

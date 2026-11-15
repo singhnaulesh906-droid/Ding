@@ -1,0 +1,426 @@
+{
+  "entities": {
+    "PrivateUser": {
+      "title": "PrivateUser",
+      "description": "Private user account profile containing PII, privacy toggles, and app lock settings. Strictly owner-only.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address (PII, never exposed in public directory)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name."
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Optional profile photo URL."
+        },
+        "about": {
+          "type": "string",
+          "description": "WhatsApp-style About status bio."
+        },
+        "handle": {
+          "type": "string",
+          "description": "Publicly shareable Ding handle."
+        },
+        "readReceiptsEnabled": {
+          "type": "boolean",
+          "description": "Whether blue double-tick read receipts are sent."
+        },
+        "isDiscoverable": {
+          "type": "boolean",
+          "description": "Whether user appears in the Ding contact directory."
+        },
+        "appLockEnabled": {
+          "type": "boolean",
+          "description": "Whether Ding PIN lock is enabled."
+        },
+        "appLockPinHash": {
+          "type": "string",
+          "description": "SHA-256 hash of user PIN when app lock is active."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "email",
+        "displayName",
+        "about",
+        "handle",
+        "readReceiptsEnabled",
+        "isDiscoverable",
+        "appLockEnabled",
+        "appLockPinHash",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatPref": {
+      "title": "ChatPref",
+      "description": "Per-user chat organization preferences (pinned, muted, archived).",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner UID."
+        },
+        "chatId": {
+          "type": "string",
+          "description": "Target chat ID."
+        },
+        "isPinned": {
+          "type": "boolean"
+        },
+        "isMuted": {
+          "type": "boolean"
+        },
+        "isArchived": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "chatId",
+        "isPinned",
+        "isMuted",
+        "isArchived",
+        "updatedAt"
+      ]
+    },
+    "DirectoryUser": {
+      "title": "DirectoryUser",
+      "description": "Public non-PII user directory entry storing ECDH P-256 public key and online presence.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "handle": {
+          "type": "string"
+        },
+        "about": {
+          "type": "string"
+        },
+        "photoUrl": {
+          "type": "string"
+        },
+        "publicKeyBase64": {
+          "type": "string",
+          "description": "X.509 encoded ECDH P-256 public key in Base64 for E2E key exchange."
+        },
+        "isDiscoverable": {
+          "type": "boolean"
+        },
+        "isOnline": {
+          "type": "boolean"
+        },
+        "lastSeen": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "handle",
+        "about",
+        "publicKeyBase64",
+        "isDiscoverable",
+        "isOnline",
+        "lastSeen",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatRoom": {
+      "title": "ChatRoom",
+      "description": "1-on-1 encrypted conversation metadata shared strictly between two participants.",
+      "type": "object",
+      "properties": {
+        "participantIds": {
+          "type": "array",
+          "description": "Bounded 2-element list of participant UIDs."
+        },
+        "user1Id": {
+          "type": "string"
+        },
+        "user2Id": {
+          "type": "string"
+        },
+        "user1Name": {
+          "type": "string"
+        },
+        "user2Name": {
+          "type": "string"
+        },
+        "user1PhotoUrl": {
+          "type": "string"
+        },
+        "user2PhotoUrl": {
+          "type": "string"
+        },
+        "user1PublicKey": {
+          "type": "string"
+        },
+        "user2PublicKey": {
+          "type": "string"
+        },
+        "user1UnreadCount": {
+          "type": "integer"
+        },
+        "user2UnreadCount": {
+          "type": "integer"
+        },
+        "user1Typing": {
+          "type": "boolean"
+        },
+        "user2Typing": {
+          "type": "boolean"
+        },
+        "lastMessageCiphertext": {
+          "type": "string"
+        },
+        "lastMessageIv": {
+          "type": "string"
+        },
+        "lastMessageSenderId": {
+          "type": "string"
+        },
+        "lastMessageStatus": {
+          "type": "string",
+          "enum": ["", "sent", "delivered", "read"]
+        },
+        "disappearingSeconds": {
+          "type": "integer"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "participantIds",
+        "user1Id",
+        "user2Id",
+        "user1Name",
+        "user2Name",
+        "user1PublicKey",
+        "user2PublicKey",
+        "user1UnreadCount",
+        "user2UnreadCount",
+        "user1Typing",
+        "user2Typing",
+        "lastMessageCiphertext",
+        "lastMessageIv",
+        "lastMessageSenderId",
+        "lastMessageStatus",
+        "disappearingSeconds",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "End-to-end AES-256-GCM encrypted message inside a chat room.",
+      "type": "object",
+      "properties": {
+        "senderId": {
+          "type": "string"
+        },
+        "participantIds": {
+          "type": "array"
+        },
+        "ciphertext": {
+          "type": "string"
+        },
+        "iv": {
+          "type": "string"
+        },
+        "messageType": {
+          "type": "string",
+          "enum": ["text", "system"]
+        },
+        "replyToMessageId": {
+          "type": "string"
+        },
+        "replyToCiphertext": {
+          "type": "string"
+        },
+        "replyToIv": {
+          "type": "string"
+        },
+        "replyToSenderId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["sent", "delivered", "read"]
+        },
+        "reactionUser1": {
+          "type": "string"
+        },
+        "reactionUser2": {
+          "type": "string"
+        },
+        "starredBy": {
+          "type": "array"
+        },
+        "deletedForEveryone": {
+          "type": "boolean"
+        },
+        "clientSeq": {
+          "type": "integer"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "senderId",
+        "participantIds",
+        "ciphertext",
+        "iv",
+        "messageType",
+        "status",
+        "reactionUser1",
+        "reactionUser2",
+        "starredBy",
+        "deletedForEveryone",
+        "clientSeq",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StatusUpdate": {
+      "title": "StatusUpdate",
+      "description": "WhatsApp-style 24-hour status update shared with authenticated Ding users.",
+      "type": "object",
+      "properties": {
+        "authorId": {
+          "type": "string"
+        },
+        "authorName": {
+          "type": "string"
+        },
+        "authorPhotoUrl": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "styleIndex": {
+          "type": "integer"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "viewerIds": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "authorId",
+        "authorName",
+        "content",
+        "styleIndex",
+        "isActive",
+        "viewerIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/PrivateUser"
+      },
+      "description": "Private user account and PII."
+    },
+    "/users/{userId}/chatPrefs/{chatId}": {
+      "schema": {
+        "$ref": "#/entities/ChatPref"
+      },
+      "description": "Owner-scoped pin, mute, and archive preferences per chat."
+    },
+    "/directory/{userId}": {
+      "schema": {
+        "$ref": "#/entities/DirectoryUser"
+      },
+      "description": "Public non-PII Ding user directory and ECDH public keys."
+    },
+    "/chats/{chatId}": {
+      "schema": {
+        "$ref": "#/entities/ChatRoom"
+      },
+      "description": "1-on-1 encrypted chat conversations."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/ChatMessage"
+      },
+      "description": "Encrypted messages within a chat room."
+    },
+    "/statusUpdates/{statusId}": {
+      "schema": {
+        "$ref": "#/entities/StatusUpdate"
+      },
+      "description": "24-hour status updates."
+    }
+  }
+}

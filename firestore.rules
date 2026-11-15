@@ -1,0 +1,388 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- ENTITY VALIDATION BLUEPRINTS ---
+    function isValidPrivateUser(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.email is string && data.email.size() <= 120 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.about is string && data.about.size() <= 140 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 40 &&
+             data.readReceiptsEnabled is bool &&
+             data.isDiscoverable is bool &&
+             data.appLockEnabled is bool &&
+             data.appLockPinHash is string && data.appLockPinHash.size() <= 128 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidChatPref(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.chatId is string && isValidId(data.chatId) &&
+             data.isPinned is bool &&
+             data.isMuted is bool &&
+             data.isArchived is bool &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDirectoryUser(data) {
+      return data.userId is string && isValidId(data.userId) &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 40 &&
+             data.about is string && data.about.size() <= 140 &&
+             (!('photoUrl' in data) || data.photoUrl == null || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             data.publicKeyBase64 is string && data.publicKeyBase64.size() >= 40 && data.publicKeyBase64.size() <= 300 &&
+             data.isDiscoverable is bool &&
+             data.isOnline is bool &&
+             isValidTimestamp(data.lastSeen) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidChatRoom(data) {
+      return data.participantIds is list &&
+             data.participantIds.size() == 2 &&
+             data.participantIds[0] is string && isValidId(data.participantIds[0]) &&
+             data.participantIds[1] is string && isValidId(data.participantIds[1]) &&
+             data.user1Id is string && data.user1Id == data.participantIds[0] &&
+             data.user2Id is string && data.user2Id == data.participantIds[1] &&
+             data.user1Name is string && data.user1Name.size() >= 1 && data.user1Name.size() <= 60 &&
+             data.user2Name is string && data.user2Name.size() >= 1 && data.user2Name.size() <= 60 &&
+             (!('user1PhotoUrl' in data) || data.user1PhotoUrl == null || (data.user1PhotoUrl is string && data.user1PhotoUrl.size() <= 500)) &&
+             (!('user2PhotoUrl' in data) || data.user2PhotoUrl == null || (data.user2PhotoUrl is string && data.user2PhotoUrl.size() <= 500)) &&
+             data.user1PublicKey is string && data.user1PublicKey.size() >= 40 && data.user1PublicKey.size() <= 300 &&
+             data.user2PublicKey is string && data.user2PublicKey.size() >= 40 && data.user2PublicKey.size() <= 300 &&
+             data.user1UnreadCount is int && data.user1UnreadCount >= 0 && data.user1UnreadCount <= 100000 &&
+             data.user2UnreadCount is int && data.user2UnreadCount >= 0 && data.user2UnreadCount <= 100000 &&
+             data.user1Typing is bool &&
+             data.user2Typing is bool &&
+             data.lastMessageCiphertext is string && data.lastMessageCiphertext.size() <= 4096 &&
+             data.lastMessageIv is string && data.lastMessageIv.size() <= 64 &&
+             data.lastMessageSenderId is string && data.lastMessageSenderId.size() <= 128 &&
+             data.lastMessageStatus in ['', 'sent', 'delivered', 'read'] &&
+             data.disappearingSeconds is int && data.disappearingSeconds in [0, 86400, 604800, 7776000] &&
+             data.createdBy is string && isValidId(data.createdBy) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidChatMessage(data) {
+      return data.senderId is string && isValidId(data.senderId) &&
+             data.participantIds is list && data.participantIds.size() == 2 &&
+             data.participantIds[0] is string && isValidId(data.participantIds[0]) &&
+             data.participantIds[1] is string && isValidId(data.participantIds[1]) &&
+             data.ciphertext is string && data.ciphertext.size() >= 1 && data.ciphertext.size() <= 8192 &&
+             data.iv is string && data.iv.size() >= 8 && data.iv.size() <= 64 &&
+             data.messageType in ['text', 'system'] &&
+             (!('replyToMessageId' in data) || data.replyToMessageId == null || (data.replyToMessageId is string && data.replyToMessageId.size() <= 128)) &&
+             (!('replyToCiphertext' in data) || data.replyToCiphertext == null || (data.replyToCiphertext is string && data.replyToCiphertext.size() <= 1024)) &&
+             (!('replyToIv' in data) || data.replyToIv == null || (data.replyToIv is string && data.replyToIv.size() <= 64)) &&
+             (!('replyToSenderId' in data) || data.replyToSenderId == null || (data.replyToSenderId is string && data.replyToSenderId.size() <= 128)) &&
+             data.status in ['sent', 'delivered', 'read'] &&
+             data.reactionUser1 is string && data.reactionUser1.size() <= 16 &&
+             data.reactionUser2 is string && data.reactionUser2.size() <= 16 &&
+             data.starredBy is list && data.starredBy.size() <= 2 &&
+             (data.starredBy.size() == 0 || data.starredBy[0] is string) &&
+             data.deletedForEveryone is bool &&
+             data.clientSeq is int && data.clientSeq >= 0 &&
+             (!('expiresAt' in data) || data.expiresAt == null || data.expiresAt is timestamp) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidStatusUpdate(data) {
+      return data.authorId is string && isValidId(data.authorId) &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 60 &&
+             (!('authorPhotoUrl' in data) || data.authorPhotoUrl == null || (data.authorPhotoUrl is string && data.authorPhotoUrl.size() <= 500)) &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 300 &&
+             data.styleIndex is int && data.styleIndex >= 0 && data.styleIndex <= 5 &&
+             data.isActive is bool &&
+             data.viewerIds is list && data.viewerIds.size() <= 100 &&
+             (data.viewerIds.size() == 0 || data.viewerIds[0] is string) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    // --- 1. PRIVATE USER PROFILE (Owner-Only PII Isolation) ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'email', 'displayName', 'about', 'handle',
+                         'readReceiptsEnabled', 'isDiscoverable', 'appLockEnabled',
+                         'appLockPinHash', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'email', 'displayName', 'photoUrl', 'about', 'handle',
+                         'readReceiptsEnabled', 'isDiscoverable', 'appLockEnabled',
+                         'appLockPinHash', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidPrivateUser(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidPrivateUser(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().email == existing().email &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'photoUrl', 'about', 'handle',
+                         'readReceiptsEnabled', 'isDiscoverable', 'appLockEnabled',
+                         'appLockPinHash', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      // Per-user chat preferences (pin, mute, archive)
+      match /chatPrefs/{chatId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(chatId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(chatId) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().chatId == chatId &&
+                         incoming().keys().hasAll(['userId', 'chatId', 'isPinned', 'isMuted', 'isArchived', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'chatId', 'isPinned', 'isMuted', 'isArchived', 'updatedAt']) &&
+                         isValidChatPref(incoming());
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(chatId) &&
+                         isValidChatPref(incoming()) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().chatId == existing().chatId &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['isPinned', 'isMuted', 'isArchived', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(chatId) && request.auth.uid == userId;
+      }
+    }
+
+    // --- 2. PUBLIC NON-PII DIRECTORY (ECDH Public Keys & Presence) ---
+    match /directory/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (resource == null || resource.data == null || existing().isDiscoverable == true || request.auth.uid == userId);
+      allow list: if isSignedIn() && existing().isDiscoverable == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'handle', 'about', 'publicKeyBase64',
+                         'isDiscoverable', 'isOnline', 'lastSeen', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'handle', 'about', 'photoUrl',
+                         'publicKeyBase64', 'isDiscoverable', 'isOnline', 'lastSeen',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidDirectoryUser(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidDirectoryUser(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'handle', 'about', 'photoUrl',
+                         'publicKeyBase64', 'isDiscoverable', 'isOnline', 'lastSeen', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // --- 3. 1-ON-1 ENCRYPTED CHAT ROOMS ---
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && isValidId(chatId) && (resource == null || resource.data == null || request.auth.uid in existing().participantIds);
+      allow list: if isSignedIn() && request.auth.uid in existing().participantIds;
+
+      allow create: if isSignedIn() &&
+                       isValidId(chatId) &&
+                       incoming().createdBy == request.auth.uid &&
+                       request.auth.uid in incoming().participantIds &&
+                       incoming().keys().hasAll([
+                         'participantIds', 'user1Id', 'user2Id', 'user1Name', 'user2Name',
+                         'user1PublicKey', 'user2PublicKey', 'user1UnreadCount', 'user2UnreadCount',
+                         'user1Typing', 'user2Typing', 'lastMessageCiphertext', 'lastMessageIv',
+                         'lastMessageSenderId', 'lastMessageStatus', 'disappearingSeconds',
+                         'createdBy', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'participantIds', 'user1Id', 'user2Id', 'user1Name', 'user2Name',
+                         'user1PhotoUrl', 'user2PhotoUrl', 'user1PublicKey', 'user2PublicKey',
+                         'user1UnreadCount', 'user2UnreadCount', 'user1Typing', 'user2Typing',
+                         'lastMessageCiphertext', 'lastMessageIv', 'lastMessageSenderId',
+                         'lastMessageStatus', 'disappearingSeconds', 'createdBy',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidChatRoom(incoming()) &&
+                       (incoming().user1Id != incoming().user2Id || incoming().user1Id == request.auth.uid) &&
+                       exists(/databases/$(database)/documents/directory/$(incoming().user1Id)) &&
+                       exists(/databases/$(database)/documents/directory/$(incoming().user2Id));
+
+      allow update: if isSignedIn() &&
+                       isValidId(chatId) &&
+                       isValidChatRoom(incoming()) &&
+                       request.auth.uid in existing().participantIds &&
+                       incoming().participantIds == existing().participantIds &&
+                       incoming().user1Id == existing().user1Id &&
+                       incoming().user2Id == existing().user2Id &&
+                       incoming().createdBy == existing().createdBy &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Send message metadata update
+                         (incoming().lastMessageSenderId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'lastMessageCiphertext', 'lastMessageIv', 'lastMessageSenderId',
+                            'lastMessageStatus', 'user1UnreadCount', 'user2UnreadCount',
+                            'user1Typing', 'user2Typing', 'updatedAt'
+                          ])) ||
+                         // Action: Read receipts / typing / mark delivered
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'user1UnreadCount', 'user2UnreadCount', 'lastMessageStatus',
+                           'user1Typing', 'user2Typing', 'updatedAt'
+                         ]) ||
+                         // Action: Disappearing message timer
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'disappearingSeconds', 'updatedAt'
+                         ]) ||
+                         // Action: Sync participant profile / key
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'user1Name', 'user2Name', 'user1PhotoUrl', 'user2PhotoUrl',
+                           'user1PublicKey', 'user2PublicKey', 'updatedAt'
+                         ])
+                       );
+
+      allow delete: if false;
+
+      // Encrypted messages subcollection (denormalized participantIds for fast flat list security)
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(chatId) && isValidId(messageId) && request.auth.uid in existing().participantIds;
+        allow list: if isSignedIn() && request.auth.uid in existing().participantIds;
+
+        allow create: if isSignedIn() &&
+                         isValidId(chatId) &&
+                         isValidId(messageId) &&
+                         incoming().senderId == request.auth.uid &&
+                         request.auth.uid in incoming().participantIds &&
+                         incoming().keys().hasAll([
+                           'senderId', 'participantIds', 'ciphertext', 'iv', 'messageType',
+                           'status', 'reactionUser1', 'reactionUser2', 'starredBy',
+                           'deletedForEveryone', 'clientSeq', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'senderId', 'participantIds', 'ciphertext', 'iv', 'messageType',
+                           'replyToMessageId', 'replyToCiphertext', 'replyToIv', 'replyToSenderId',
+                           'status', 'reactionUser1', 'reactionUser2', 'starredBy',
+                           'deletedForEveryone', 'clientSeq', 'expiresAt', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidChatMessage(incoming()) &&
+                         exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                         incoming().participantIds == get(/databases/$(database)/documents/chats/$(chatId)).data.participantIds;
+
+        allow update: if isSignedIn() &&
+                         isValidId(chatId) &&
+                         isValidId(messageId) &&
+                         isValidChatMessage(incoming()) &&
+                         request.auth.uid in existing().participantIds &&
+                         incoming().senderId == existing().senderId &&
+                         incoming().participantIds == existing().participantIds &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().clientSeq == existing().clientSeq &&
+                         (
+                           // Action: Recipient updates delivery / read status
+                           (existing().senderId != request.auth.uid &&
+                            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
+                           // Action: Either participant reacts or stars message
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'reactionUser1', 'reactionUser2', 'starredBy', 'updatedAt'
+                           ]) ||
+                           // Action: Sender deletes message for everyone
+                           (existing().senderId == request.auth.uid &&
+                            incoming().deletedForEveryone == true &&
+                            incoming().diff(existing()).affectedKeys().hasOnly([
+                              'deletedForEveryone', 'ciphertext', 'iv', 'updatedAt'
+                            ]))
+                         );
+
+        allow delete: if isSignedIn() && isValidId(chatId) && isValidId(messageId) && existing().senderId == request.auth.uid;
+      }
+    }
+
+    // --- 4. WHATSAPP-STYLE STATUS UPDATES ---
+    match /statusUpdates/{statusId} {
+      allow get: if isSignedIn() && isValidId(statusId) && (resource == null || resource.data == null || existing().isActive == true);
+      allow list: if isSignedIn() && existing().isActive == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(statusId) &&
+                       incoming().authorId == request.auth.uid &&
+                       incoming().isActive == true &&
+                       incoming().keys().hasAll([
+                         'authorId', 'authorName', 'content', 'styleIndex',
+                         'isActive', 'viewerIds', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'authorId', 'authorName', 'authorPhotoUrl', 'content', 'styleIndex',
+                         'isActive', 'viewerIds', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidStatusUpdate(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(statusId) &&
+                       isValidStatusUpdate(incoming()) &&
+                       incoming().authorId == existing().authorId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Author edits or deactivates their status
+                         (existing().authorId == request.auth.uid &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'isActive', 'content', 'styleIndex', 'updatedAt'
+                          ])) ||
+                         // Action: Viewer marks status as seen
+                         (incoming().diff(existing()).affectedKeys().hasOnly(['viewerIds', 'updatedAt']) &&
+                          incoming().viewerIds.size() >= existing().viewerIds.size())
+                       );
+
+      allow delete: if isSignedIn() && isValidId(statusId) && existing().authorId == request.auth.uid;
+    }
+  }
+}
